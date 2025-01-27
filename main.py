@@ -8,7 +8,7 @@ from web_scraping import scrape_and_write_to_file,prepare_documents
 
 
 def embed_documents_with_chroma(documents, persist_directory):
-    """Embed documents using Llama Embeddings and store in ChromaDB."""
+    
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     split_docs = text_splitter.split_documents(documents)
     print(f'split docs first chunk = {split_docs[0]}')
