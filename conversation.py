@@ -4,46 +4,42 @@ from langchain.schema import Document
 import logging
 import time
 
-# Configure logging
 logging.basicConfig(
-    level=logging.INFO,  # Set the logging level
+    level=logging.INFO, 
     format="---------- %(levelname)s - %(message)s ----------", 
 )
-# Initialize ChromaDB
+
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 chroma_db = Chroma(collection_name="conversation_history", embedding_function=embeddings, persist_directory="chroma_db")
 
-def add_conversation(user_input, model_response):
+def add_conversation(user_input, model_response, model_name):
 
     timestamp = int(time.time()) 
     doc = Document(
         page_content=f"User: {user_input}\nModel: {model_response}",
-        metadata={"user_input": user_input, "model_response": model_response, "timestamp": timestamp}
+        metadata={"user_input": user_input, "model_response": model_response,"model_name": model_name, "timestamp": timestamp}
     )
     chroma_db.add_documents([doc])
 
 
 def load_conversations():
    
-    documents = chroma_db._collection.get(include=["metadatas"])
-    # print(documents) 
-
+    documents = chroma_db._collection.get(include=["metadatas"]) 
     if not documents["metadatas"]:
         logging.info("No conversations found in the database.")
         return []
-
     conversations = [
         {
             "user": meta["user_input"],
             "model": meta["model_response"],
-            "timestamp": meta.get("timestamp", 0)  
+            "model_name": meta["model_name"],
+            "timestamp": meta.get("timestamp", 0) 
         }
         for meta in documents["metadatas"]
     ]
     return sorted(conversations, key=lambda x: x["timestamp"])
 
 def print_conversations():
-    
     conversations = load_conversations()
     for conversation in conversations:
         timestamp = conversation.get("timestamp")  
@@ -56,11 +52,8 @@ def print_conversations():
 
 
 def delete_conversations():
-    """Delete all conversations from ChromaDB."""
     try:
-        document_ids = chroma_db._collection.get()["ids"]
-        print(f'doccument ids = {document_ids}')
-        
+        document_ids = chroma_db._collection.get()["ids"]        
         if not document_ids:
             logging.warning("No conversations to delete.")
             return
@@ -70,7 +63,6 @@ def delete_conversations():
     except Exception as e:
         logging.error(f"Error deleting conversations: {e}")
 
-# Example Usage
 if __name__ == "__main__":
     logging.info("adding question1.")
     add_conversation("question 1", "answer 1")

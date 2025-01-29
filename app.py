@@ -1,19 +1,23 @@
 from conversation import add_conversation, delete_conversations, load_conversations
 from query_vectordb import generate_vector_db_response
 from instruction import INSTRUCTION_TEMPLATE
+from langchain.prompts import PromptTemplate
 import streamlit as st
 import requests
 import asyncio
 
 FASTAPI_URL = "http://127.0.0.1:8000/generate"
 
+def model_name():
+    options = ["llama3.2", "deepseek-r1"]
+    st.sidebar.selectbox("Choose a model", options, key="model_name")
+
 def initialize_session_state():
     if "conversation" not in st.session_state:
         st.session_state.conversation = load_conversations()
 
 def render_sidebar():
-    st.sidebar.title("Actions")
-    
+    model_name()
     if st.sidebar.button("Delete All Conversations"):
         delete_conversations()
         st.session_state.conversation = []  
@@ -24,9 +28,9 @@ def render_sidebar():
         st.sidebar.write(st.session_state)
 
 def render_ui():
+    st.title("RAG Using Streamlit & FastAPI")
+    st.write("---")
     render_sidebar()
-    st.title("LLaMA Model with Streamlit UI")
-    st.markdown("---")
     display_conversation_history()
     chat_input_handler() 
 
@@ -47,8 +51,20 @@ async def handle_generate_response(prompt):
     if not prompt.strip():
         st.warning("Please enter a prompt to generate a response.")
         return
+    model_name = st.session_state.model_name
     vector_db_response = await generate_vector_db_response(prompt)
-    full_prompt = f""" {vector_db_response}, {INSTRUCTION_TEMPLATE} Question: {prompt} """
+    
+    prompt_template = PromptTemplate(
+        input_variables=["context", "instructions", "question"],
+        template="{context}, {instructions} Question: {question}"
+    )
+    full_prompt = prompt_template.format(
+        context=vector_db_response,
+        instructions=INSTRUCTION_TEMPLATE,
+        question=prompt
+    )
+
+    # full_prompt = f""" {vector_db_response}, {INSTRUCTION_TEMPLATE} Question: {prompt} """
     payload = {
         "prompt": "\n".join(
             [f"User: {entry['user']}\nModel: {entry['model']}" for entry in st.session_state.conversation]
@@ -57,17 +73,19 @@ async def handle_generate_response(prompt):
     print(full_prompt)
     print("--------------------------------------------------------")
     print(payload)
-    model_response = call_fastapi_endpoint(payload)
-    add_conversation(prompt, model_response)
-    st.session_state.conversation.append({"user": prompt, "model": model_response})
+    model_response = call_fastapi_endpoint(payload,model_name)
+    add_conversation(prompt, model_response,model_name)
+    st.session_state.conversation.append({"user": prompt, "model": model_response, "model_name":model_name})
    
     with st.chat_message("user"):
         st.markdown(f"{prompt}") 
 
     with st.chat_message("assistant"):
         st.markdown(f"{model_response}")
-def call_fastapi_endpoint(payload):
+
+def call_fastapi_endpoint(payload,model_name):
     try:
+        payload["model"] = model_name
         response = requests.post(FASTAPI_URL, json=payload)
         print("---------response-------------")
         print(response.json())

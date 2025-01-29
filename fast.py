@@ -5,12 +5,12 @@ import requests
 import json
 
 OLLAMA_API_URL = "http://localhost:11434/api/chat"
-MODEL_NAME = "llama3.2"
 
 app = FastAPI()
 
 class Item(BaseModel):
     prompt: str
+    model: str
 
 def parse_response(response):
     full_response = ''
@@ -26,9 +26,9 @@ def parse_response(response):
         print(f'full resonse strip :------- {full_response.strip()}')
     return full_response.strip()
 
-def generate_response(prompt: str):
+def generate_response(prompt: str, model: str):
     payload = {
-        "model": MODEL_NAME,
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
     }
 
@@ -37,10 +37,6 @@ def generate_response(prompt: str):
     try:
         response = requests.post(OLLAMA_API_URL, headers=headers, json=payload)
         response.raise_for_status()
-        for line in response.iter_lines():
-            if line:
-                json_line = json.loads(line)
-                print(json_line['message']['content'])
         return parse_response(response)
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"Error communicating with Ollama API: {e}")
@@ -48,7 +44,8 @@ def generate_response(prompt: str):
 @app.post("/generate")
 async def generate_text(request: Item):
     try:
-        response = generate_response(request.prompt)
+        print(f"model = {request.model}")
+        response = generate_response(request.prompt,request.model)
         print("------------------------------------------")
         print(f"Response in generate_text: {response}")
         return {"response": response}
@@ -57,7 +54,7 @@ async def generate_text(request: Item):
 
 @app.get("/")
 async def root():
-    return {"message": f"Ollama FastAPI server is running with model: {MODEL_NAME}!"}
+    return {"message": f"Ollama FastAPI server is running with model!"}
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):

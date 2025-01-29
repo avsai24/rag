@@ -38,11 +38,8 @@ def scrape_and_write_to_file(links, base_dir):
     print(f"entering try")
     try:
         for idx, link in enumerate(links):
-            print(f"entered for loop")
             content = do(link)
-            print(f'content: {content}')
             file_name = os.path.join(base_dir, f'craw{idx+1}.md')
-            # Join cleaned content with newlines and write to the file
             cleaned_content = "\n".join(content)
             write.file(file_name, cleaned_content)
             print(f"Content saved to {file_name}")
@@ -60,8 +57,8 @@ def prepare_documents(directory):
 def main():
     link = ['https://appstekcorp.com/']
     scrape_and_write_to_file(link, base)
-    # doccument = prepare_documents(base)
-    # # print(doccument)
+    doccument = prepare_documents(base)
+    print(doccument)
 
 if __name__ == "__main__":
     base = '/Users/venkatasaiancha/Desktop/RAG/markdown_files'

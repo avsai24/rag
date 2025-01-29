@@ -4,7 +4,7 @@ import asyncio
 
 
 def get_vectorstore():
-    """Singleton-like function to initialize and return the vectorstore."""
+    
     if not hasattr(get_vectorstore, "vectorstore"):
         embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         persist_directory = "chroma_db"
